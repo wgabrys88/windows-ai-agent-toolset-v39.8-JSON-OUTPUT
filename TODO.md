@@ -1,5 +1,6 @@
-Below is a single merged unified diff that applies cleanly to the original codebase (your current main.py, panel.html, config.py) and incorporates everything from DIFF1+DIFF2+DIFF3, re-evaluated and re-based so it does not assume any prior patch was applied.
+Below is a single merged unified diff that applies cleanly to the original codebase (your current `main.py`, `panel.html`, `config.py`) and incorporates everything from DIFF1+DIFF2+DIFF3, re-evaluated and re-based so it does not assume any prior patch was applied.
 
+```diff
 --- a/main.py
 +++ b/main.py
 @@ -184,6 +184,65 @@
@@ -395,3 +396,4 @@ Below is a single merged unified diff that applies cleanly to the original codeb
          ],
      },
  }
+```
