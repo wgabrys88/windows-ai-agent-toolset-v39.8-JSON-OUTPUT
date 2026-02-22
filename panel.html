@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Franz</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d0d0f;--surface:#16161a;--border:#2a2a35;
+    --accent:#4a9eff;--accent2:#ff6b35;
+    --text:#e8e8f0;--text-dim:#6b6b80;--text-mid:#a0a0b8;
+    --ok:#3ecf8e;--warn:#f0a000;--err:#ff4455;
+    --radius:8px;--mono:"Cascadia Code","Fira Code","Consolas",monospace;
+    --split-x:62%;--split-y:55%;
+  }
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:13px}
+  #root{display:grid;width:100vw;height:100vh;grid-template-columns:var(--split-x) 4px 1fr;grid-template-rows:var(--split-y) 4px 1fr}
+  #gutter-v{grid-column:2;grid-row:1/4;background:var(--border);cursor:col-resize;transition:background .15s;z-index:10}
+  #gutter-v:hover{background:var(--accent)}
+  #gutter-h{grid-column:3;grid-row:2;background:var(--border);cursor:row-resize;transition:background .15s;z-index:10}
+  #gutter-h:hover{background:var(--accent)}
+  #cross{grid-column:2;grid-row:2;background:var(--accent);cursor:move;z-index:20;border-radius:2px}
+  #pane-canvas{grid-column:1;grid-row:1;overflow:hidden;position:relative}
+  #pane-vlm{grid-column:3;grid-row:1;overflow:hidden;display:flex;flex-direction:column}
+  #pane-log{grid-column:1;grid-row:3;overflow:hidden;display:flex;flex-direction:column}
+  #pane-inject{grid-column:3;grid-row:3;overflow:hidden;display:flex;flex-direction:column}
+  .pane-header{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim)}
+  .pane-header .badge{margin-left:auto;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.04em;background:var(--border);color:var(--text-mid)}
+  .pane-header .badge.ok{background:#1a3d2e;color:var(--ok)}
+  .pane-header .badge.warn{background:#3d2e00;color:var(--warn)}
+  .pane-header .badge.err{background:#3d0a10;color:var(--err)}
+  .pane-body{flex:1;overflow:auto;padding:10px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  #canvas-wrap{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#080809;position:relative}
+  #canvas-stack{position:relative}
+  #canvas-stack canvas{position:absolute;top:0;left:0}
+  #c-base{position:relative;display:block}
+  #c-heat{pointer-events:none}
+  #c-label{pointer-events:none}
+  .canvas-status{position:absolute;bottom:8px;right:10px;font-size:10px;color:var(--text-dim);font-family:var(--mono);pointer-events:none}
+  #vlm-raw{font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--text-mid)}
+  #vlm-raw .obs{color:#a0d4ff}
+  #vlm-raw .acts{color:#ffd080}
+  #log-list{font-family:var(--mono);font-size:11px;line-height:1.5;list-style:none}
+  #log-list li{padding:1px 0;border-bottom:1px solid #1a1a20}
+  #log-list li.info{color:var(--text-dim)}
+  #log-list li.ok{color:var(--ok)}
+  #log-list li.warn{color:var(--warn)}
+  #log-list li.error{color:var(--err)}
+  #log-list li time{color:#3a3a50;margin-right:6px}
+  #inject-area{flex:1;display:flex;flex-direction:column;gap:8px;padding:10px}
+  #inject-textarea{flex:1;background:#0a0a0e;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px;resize:none;outline:none;transition:border-color .15s;line-height:1.6}
+  #inject-textarea:focus{border-color:var(--accent)}
+  .inject-row{display:flex;gap:8px;align-items:center;flex-shrink:0}
+  button{padding:6px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:background .12s,border-color .12s,color .12s;white-space:nowrap}
+  button:hover{background:var(--border)}
+  button.primary{background:var(--accent);color:#000;border-color:var(--accent)}
+  button.primary:hover{background:#6ab8ff}
+  button.danger{background:transparent;color:var(--err);border-color:var(--err)}
+  button.danger:hover{background:#3d0a10}
+  #inject-status{font-size:11px;font-family:var(--mono);color:var(--text-dim);flex:1}
+  #statusbar{position:fixed;bottom:0;left:0;right:0;height:22px;line-height:22px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:0;font-size:11px;z-index:100}
+  .sb-item{padding:0 12px;border-right:1px solid var(--border);color:var(--text-dim)}
+  .sb-item span{color:var(--text-mid)}
+  .sb-phase{color:var(--accent)!important}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:#44445a}
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="pane-canvas">
+    <div class="pane-header">
+      Annotated View
+      <span class="badge" id="badge-img">--</span>
+    </div>
+    <div id="canvas-wrap">
+      <div id="canvas-stack">
+        <canvas id="c-base"></canvas>
+        <canvas id="c-heat"></canvas>
+        <canvas id="c-label"></canvas>
+      </div>
+      <div class="canvas-status" id="canvas-status">no frame</div>
+    </div>
+  </div>
+  <div id="gutter-v"></div>
+  <div id="pane-vlm">
+    <div class="pane-header">
+      VLM Output
+      <span class="badge" id="badge-turn">turn 0</span>
+    </div>
+    <div class="pane-body">
+      <pre id="vlm-raw">Waiting for first response...</pre>
+    </div>
+  </div>
+  <div id="cross"></div>
+  <div id="gutter-h"></div>
+  <div id="pane-log">
+    <div class="pane-header">
+      Event Log
+      <span class="badge" id="badge-phase">init</span>
+    </div>
+    <div class="pane-body">
+      <ul id="log-list"></ul>
+    </div>
+  </div>
+  <div id="pane-inject">
+    <div class="pane-header">
+      Manual Inject
+      <span class="badge" id="badge-inject">idle</span>
+    </div>
+    <div id="inject-area">
+      <textarea id="inject-textarea" placeholder='Paste JSON VLM output here: {"observation":"...","bboxes":[...],"actions":[...]} then click Inject.'></textarea>
+      <div class="inject-row">
+        <button class="primary" id="btn-inject">Inject</button>
+        <button id="btn-clear-inject">Clear</button>
+        <span id="inject-status"></span>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="statusbar">
+  <div class="sb-item">Franz</div>
+  <div class="sb-item">phase: <span class="sb-phase" id="sb-phase">--</span></div>
+  <div class="sb-item">turn: <span id="sb-turn">0</span></div>
+  <div class="sb-item">msg: <span id="sb-msg">0</span></div>
+  <div class="sb-item">seq: <span id="sb-seq">--</span></div>
+  <div class="sb-item" id="sb-error" style="color:var(--err);display:none"></div>
+</div>
+<script type="module">
+'use strict';
+
+let CFG={ui:{},capture_width:512,capture_height:288};
+
+async function loadConfig(){
+  try{const r=await fetch('/config');if(r.ok)CFG=await r.json();uiLog('config loaded','ok')}
+  catch(e){uiLog(`config load failed: ${e}`,'error')}
+}
+
+const logList=document.getElementById('log-list');
+const MAX_LOG=200;
+function uiLog(msg,level='info'){
+  const li=document.createElement('li');li.className=level;
+  const t=document.createElement('time');
+  t.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});
+  li.appendChild(t);li.appendChild(document.createTextNode(msg));
+  logList.prepend(li);
+  while(logList.children.length>MAX_LOG)logList.removeChild(logList.lastChild);
+}
+
+const root=document.getElementById('root');
+const LS_X='franz_split_x',LS_Y='franz_split_y';
+let splitX=parseFloat(localStorage.getItem(LS_X)||'62');
+let splitY=parseFloat(localStorage.getItem(LS_Y)||'55');
+
+function applyLayout(){
+  root.style.gridTemplateColumns=`${splitX}% 4px 1fr`;
+  root.style.gridTemplateRows=`${splitY}% 4px 1fr`;
+}
+applyLayout();
+
+function makeDragger(onMove){
+  return function(e){
+    e.preventDefault();
+    const move=ev=>onMove(ev);
+    const up=()=>{window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up)};
+    window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  };
+}
+
+document.getElementById('gutter-v').addEventListener('mousedown',makeDragger(e=>{
+  splitX=Math.max(15,Math.min(85,(e.clientX/window.innerWidth)*100));
+  localStorage.setItem(LS_X,splitX);applyLayout();fitCanvas();
+}));
+document.getElementById('gutter-h').addEventListener('mousedown',makeDragger(e=>{
+  splitY=Math.max(15,Math.min(85,(e.clientY/window.innerHeight)*100));
+  localStorage.setItem(LS_Y,splitY);applyLayout();fitCanvas();
+}));
+document.getElementById('cross').addEventListener('mousedown',makeDragger(e=>{
+  splitX=Math.max(15,Math.min(85,(e.clientX/window.innerWidth)*100));
+  splitY=Math.max(15,Math.min(85,(e.clientY/window.innerHeight)*100));
+  localStorage.setItem(LS_X,splitX);localStorage.setItem(LS_Y,splitY);applyLayout();fitCanvas();
+}));
+
+const cBase=document.getElementById('c-base');
+const cHeat=document.getElementById('c-heat');
+const cLabel=document.getElementById('c-label');
+const stack=document.getElementById('canvas-stack');
+const wrap=document.getElementById('canvas-wrap');
+const ctxBase=cBase.getContext('2d');
+const ctxHeat=cHeat.getContext('2d');
+const ctxLabel=cLabel.getContext('2d');
+
+let canvasW=0,canvasH=0;
+
+function resizeCanvases(w,h){
+  if(canvasW===w&&canvasH===h)return;
+  canvasW=w;canvasH=h;
+  [cBase,cHeat,cLabel].forEach(c=>{c.width=w;c.height=h});
+  stack.style.width=`${w}px`;stack.style.height=`${h}px`;
+}
+
+function fitCanvas(){
+  if(!canvasW||!canvasH)return;
+  const ww=wrap.clientWidth-4,wh=wrap.clientHeight-4;
+  const scale=Math.min(ww/canvasW,wh/canvasH,1);
+  const dw=Math.round(canvasW*scale),dh=Math.round(canvasH*scale);
+  stack.style.width=`${dw}px`;stack.style.height=`${dh}px`;
+  [cBase,cHeat,cLabel].forEach(c=>{c.style.width=`${dw}px`;c.style.height=`${dh}px`});
+}
+window.addEventListener('resize',fitCanvas);
+
+function clearLayer(ctx){ctx.clearRect(0,0,canvasW,canvasH)}
+
+function drawExecutedHeat(actions){
+  const cfg=(CFG.ui?.executed_heat)||{};
+  if(cfg.enabled===false)return;
+  const radiusScale=cfg.radius_scale??0.22;
+  const stops=cfg.stops??[[0,'rgba(255,40,0,0.88)'],[0.25,'rgba(255,80,0,0.70)'],[0.55,'rgba(255,120,0,0.35)'],[1,'rgba(255,160,0,0)']];
+  const r=Math.max(canvasW,canvasH)*radiusScale;
+  for(const a of actions){
+    const x=a.x1,y=a.y1;
+    const grad=ctxHeat.createRadialGradient(x,y,0,x,y,r);
+    for(const[pos,col]of stops)grad.addColorStop(pos,col);
+    ctxHeat.beginPath();ctxHeat.arc(x,y,r,0,Math.PI*2);ctxHeat.fillStyle=grad;ctxHeat.fill();
+    if(a.x2!==undefined&&a.y2!==undefined){
+      const x2=a.x2,y2=a.y2;
+      const g2=ctxHeat.createRadialGradient(x2,y2,0,x2,y2,r*0.6);
+      for(const[pos,col]of stops)g2.addColorStop(pos,col);
+      ctxHeat.beginPath();ctxHeat.arc(x2,y2,r*0.6,0,Math.PI*2);ctxHeat.fillStyle=g2;ctxHeat.fill();
+      ctxHeat.beginPath();ctxHeat.moveTo(x,y);ctxHeat.lineTo(x2,y2);
+      ctxHeat.strokeStyle='rgba(255,100,20,0.35)';ctxHeat.lineWidth=2;ctxHeat.stroke();
+    }
+  }
+}
+
+function drawBboxHeat(bboxes){
+  const cfg=(CFG.ui?.bbox_heat)||{};
+  if(cfg.enabled===false)return;
+  const border=cfg.border??'rgba(80,160,255,0.75)';
+  const borderWidth=cfg.border_width??2;
+  const fillStops=cfg.fill_stops??[[0,'rgba(80,160,255,0.28)'],[0.5,'rgba(80,160,255,0.12)'],[1,'rgba(80,160,255,0)']];
+  for(const bb of bboxes){
+    const{x1,y1,x2,y2}=bb;
+    const bw=x2-x1,bh=y2-y1;
+    if(bw<=0||bh<=0)continue;
+    const cx=x1+bw/2,cy=y1+bh/2,rr=Math.max(bw,bh)/2;
+    const grad=ctxHeat.createRadialGradient(cx,cy,0,cx,cy,rr);
+    for(const[pos,col]of fillStops)grad.addColorStop(pos,col);
+    ctxHeat.fillStyle=grad;ctxHeat.fillRect(x1,y1,bw,bh);
+    ctxHeat.strokeStyle=border;ctxHeat.lineWidth=borderWidth;
+    ctxHeat.strokeRect(x1+borderWidth/2,y1+borderWidth/2,bw-borderWidth,bh-borderWidth);
+  }
+}
+
+function drawLabels(actions){
+  clearLayer(ctxLabel);
+  ctxLabel.font='bold 10px "Cascadia Code","Fira Code",Consolas,monospace';
+  ctxLabel.textBaseline='bottom';
+  actions.forEach((a,i)=>{
+    const label=`${i+1}. ${a.name}(${a.x1},${a.y1})`;
+    const x=a.x1+6,y=a.y1-3;
+    ctxLabel.fillStyle='rgba(0,0,0,0.7)';
+    const m=ctxLabel.measureText(label);
+    ctxLabel.fillRect(x-2,y-11,m.width+4,13);
+    ctxLabel.fillStyle='#fff';ctxLabel.fillText(label,x,y);
+  });
+}
+
+function loadBaseImage(b64){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{resizeCanvases(img.naturalWidth,img.naturalHeight);ctxBase.drawImage(img,0,0);fitCanvas();resolve()};
+    img.onerror=reject;
+    img.src=`data:image/png;base64,${b64}`;
+  });
+}
+
+function exportAnnotated(){
+  const off=new OffscreenCanvas(canvasW,canvasH);
+  const ctx=off.getContext('2d');
+  ctx.drawImage(cBase,0,0);ctx.drawImage(cHeat,0,0);ctx.drawImage(cLabel,0,0);
+  return new Promise(resolve=>{
+    off.convertToBlob({type:'image/png'}).then(blob=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(reader.result.split(',')[1]);
+      reader.readAsDataURL(blob);
+    });
+  });
+}
+
+const vlmRaw=document.getElementById('vlm-raw');
+
+function renderVlmJson(raw,bboxes,actions){
+  const escape=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  try{
+    const obj=JSON.parse(raw);
+    const obs=obj.observation||'';
+    const actsStr=JSON.stringify(obj.actions||[],null,2);
+    const bboxStr=JSON.stringify(obj.bboxes||[],null,2);
+    vlmRaw.innerHTML=
+      `<span class="obs">observation:\n${escape(obs)}</span>\n\n`+
+      `bboxes:\n${escape(bboxStr)}\n\n`+
+      `<span class="acts">actions:\n${escape(actsStr)}</span>`;
+  }catch{
+    vlmRaw.innerHTML=escape(raw);
+  }
+}
+
+function updateStatusBar(state){
+  document.getElementById('sb-phase').textContent=state.phase??'--';
+  document.getElementById('sb-turn').textContent=state.turn??0;
+  document.getElementById('sb-msg').textContent=state.msg_id??0;
+  document.getElementById('sb-seq').textContent=state.pending_seq??'--';
+  const errEl=document.getElementById('sb-error');
+  if(state.error){errEl.style.display='';errEl.textContent=`error: ${state.error}`}
+  else{errEl.style.display='none'}
+  const bp=document.getElementById('badge-phase');
+  bp.textContent=state.phase??'--';
+  bp.className=
+    state.phase==='error'||state.phase==='vlm_error'?'badge err':
+    state.phase==='running'||state.phase==='calling_vlm'?'badge ok':'badge warn';
+  document.getElementById('badge-turn').textContent=`turn ${state.turn}`;
+  document.getElementById('canvas-status').textContent=canvasW?`${canvasW}x${canvasH}`:'no frame';
+}
+
+let lastMsgId=-1,lastPendingSeq=-1,processing=false;
+
+async function postAnnotated(seq,b64){
+  try{
+    const r=await fetch('/annotated',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seq,image_b64:b64})});
+    const j=await r.json();
+    uiLog(`/annotated seq=${seq} ok=${j.ok}`,j.ok?'ok':'error');return j.ok;
+  }catch(e){uiLog(`/annotated POST failed: ${e}`,'error');return false}
+}
+
+async function handleNewFrame(state){
+  if(processing)return;processing=true;
+  try{
+    const seq=state.pending_seq,b64=state.raw_b64;
+    uiLog(`new frame seq=${seq} b64len=${b64?.length}`,'info');
+    document.getElementById('badge-img').textContent=`seq ${seq}`;
+    document.getElementById('badge-img').className='badge warn';
+    await loadBaseImage(b64);
+    clearLayer(ctxHeat);
+    drawBboxHeat(state.bboxes||[]);
+    drawExecutedHeat(state.actions||[]);
+    drawLabels(state.actions||[]);
+    if(state.vlm_json)renderVlmJson(state.vlm_json,state.bboxes,state.actions);
+    const annotatedB64=await exportAnnotated();
+    uiLog(`exported annotated len=${annotatedB64.length}`,'ok');
+    const ok=await postAnnotated(seq,annotatedB64);
+    document.getElementById('badge-img').textContent=ok?`seq ${seq} ok`:`seq ${seq} fail`;
+    document.getElementById('badge-img').className=ok?'badge ok':'badge err';
+  }catch(e){uiLog(`handleNewFrame error: ${e}`,'error')}
+  finally{processing=false}
+}
+
+async function poll(){
+  try{
+    const r=await fetch('/state');
+    if(!r.ok){uiLog(`/state HTTP ${r.status}`,'warn');return}
+    const state=await r.json();
+    updateStatusBar(state);
+    if(state.msg_id!==lastMsgId&&state.vlm_json){
+      lastMsgId=state.msg_id;
+      uiLog(`new vlm msg_id=${state.msg_id} turn=${state.turn}`,'ok');
+      renderVlmJson(state.vlm_json,state.bboxes,state.actions);
+    }
+    if(state.phase==='waiting_annotated'&&state.pending_seq>0&&state.pending_seq!==lastPendingSeq&&state.raw_b64?.length>100){
+      lastPendingSeq=state.pending_seq;
+      await handleNewFrame(state);
+    }
+  }catch(e){uiLog(`poll error: ${e}`,'warn')}
+}
+
+setInterval(poll,400);
+
+const injectTA=document.getElementById('inject-textarea');
+const injectStatus=document.getElementById('inject-status');
+const badgeInject=document.getElementById('badge-inject');
+
+document.getElementById('btn-inject').addEventListener('click',async()=>{
+  const text=injectTA.value.trim();
+  if(!text){injectStatus.textContent='nothing to inject';return}
+  try{
+    badgeInject.textContent='sending...';badgeInject.className='badge warn';
+    const r=await fetch('/inject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vlm_text:text})});
+    const j=await r.json();
+    if(j.ok){injectStatus.textContent='injected';badgeInject.textContent='ok';badgeInject.className='badge ok';uiLog('manual inject sent','ok')}
+    else{injectStatus.textContent=`fail: ${j.err}`;badgeInject.textContent='error';badgeInject.className='badge err';uiLog(`inject failed: ${j.err}`,'error')}
+  }catch(e){injectStatus.textContent=`${e}`;badgeInject.textContent='error';badgeInject.className='badge err';uiLog(`inject error: ${e}`,'error')}
+});
+
+document.getElementById('btn-clear-inject').addEventListener('click',()=>{
+  injectTA.value='';injectStatus.textContent='';badgeInject.textContent='idle';badgeInject.className='badge';
+});
+
+(async()=>{
+  uiLog('Franz panel starting','info');
+  await loadConfig();
+  uiLog(`capture size: ${CFG.capture_width}x${CFG.capture_height}`,'info');
+  uiLog('polling /state every 400ms','info');
+})();
+</script>
+</body>
+</html>

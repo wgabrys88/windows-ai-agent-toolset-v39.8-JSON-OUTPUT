@@ -1,0 +1,194 @@
+[franz][11:04:49.218][INFO] logging ready level=INFO run_dir=C:\Users\TestUser\Downloads\dev022226\runs\run_0001
+[franz][11:04:49.218][INFO] Franz starting run_dir=C:\Users\TestUser\Downloads\dev022226\runs\run_0001
+[franz][11:04:49.218][INFO] panel=C:\Users\TestUser\Downloads\dev022226\panel.html config=C:\Users\TestUser\Downloads\dev022226\config.py
+[franz][11:04:49.219][INFO] server http://127.0.0.1:1234
+[franz][11:04:49.558][INFO] phase=boot error=None
+[franz][11:04:49.558][INFO] engine: injecting boot VLM text len=568
+[franz][11:04:49.559][INFO] engine: === TURN 1 ===
+[franz][11:04:49.559][INFO] phase=running error=None
+[franz][11:04:49.559][INFO] parse_vlm_json obs_len=148 bboxes=1 actions=5
+[franz][11:04:49.559][INFO] phase=executing error=None
+[franz][11:04:49.593][INFO] execute action=click x1=500 y1=400 x2=500 y2=400
+[franz][11:04:49.751][INFO] execute action=drag x1=300 y1=300 x2=700 y2=300
+[franz][11:04:50.347][INFO] execute action=drag x1=700 y1=300 x2=700 y2=600
+[franz][11:04:50.941][INFO] execute action=drag x1=700 y1=600 x2=300 y2=600
+[franz][11:04:51.862][INFO] execute action=drag x1=300 y1=600 x2=300 y2=300
+[franz][11:04:52.319][INFO] phase=capturing error=None
+[franz][11:04:52.502][INFO] capture done 512x288 b64len=110312
+[franz][11:04:52.549][INFO] phase=waiting_annotated error=None
+[franz][11:04:52.549][INFO] engine: waiting for browser annotated seq=1
+[franz][11:04:53.397][INFO] phase=calling_vlm error=None
+[franz][11:04:53.398][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=148 img_len=206764
+[franz][11:05:08.078][INFO] vlm ok turn=1 response_len=581 usage={'prompt_tokens': 406, 'completion_tokens': 165, 'total_tokens': 571}
+[franz][11:05:08.078][INFO] phase=running error=None
+[franz][11:05:08.079][INFO] engine: === TURN 2 ===
+[franz][11:05:08.079][INFO] phase=running error=None
+[franz][11:05:08.080][INFO] parse_vlm_json obs_len=404 bboxes=0 actions=1
+[franz][11:05:08.080][INFO] phase=executing error=None
+[franz][11:05:08.080][INFO] execute action=click x1=42 y1=61 x2=42 y2=61
+[franz][11:05:08.202][INFO] phase=capturing error=None
+[franz][11:05:08.414][INFO] capture done 512x288 b64len=83844
+[franz][11:05:08.425][INFO] phase=waiting_annotated error=None
+[franz][11:05:08.425][INFO] engine: waiting for browser annotated seq=2
+[franz][11:05:08.708][INFO] phase=calling_vlm error=None
+[franz][11:05:08.710][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=404 img_len=139260
+[franz][11:05:30.951][INFO] vlm ok turn=2 response_len=848 usage={'prompt_tokens': 445, 'completion_tokens': 291, 'total_tokens': 736}
+[franz][11:05:30.952][INFO] phase=running error=None
+[franz][11:05:30.953][INFO] engine: === TURN 3 ===
+[franz][11:05:30.953][INFO] phase=running error=None
+[franz][11:05:30.953][INFO] parse_vlm_json obs_len=404 bboxes=2 actions=2
+[franz][11:05:30.954][INFO] phase=executing error=None
+[franz][11:05:30.954][INFO] execute action=click x1=710 y1=574 x2=727 y2=592
+[franz][11:05:31.077][INFO] execute action=right_click x1=683 y1=362 x2=707 y2=411
+[franz][11:05:31.190][INFO] phase=capturing error=None
+[franz][11:05:31.354][INFO] capture done 512x288 b64len=77600
+[franz][11:05:31.367][INFO] phase=waiting_annotated error=None
+[franz][11:05:31.367][INFO] engine: waiting for browser annotated seq=3
+[franz][11:05:31.505][INFO] phase=calling_vlm error=None
+[franz][11:05:31.506][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=404 img_len=111964
+[franz][11:05:54.011][INFO] vlm ok turn=3 response_len=906 usage={'prompt_tokens': 445, 'completion_tokens': 296, 'total_tokens': 741}
+[franz][11:05:54.011][INFO] phase=running error=None
+[franz][11:05:54.011][INFO] engine: === TURN 4 ===
+[franz][11:05:54.012][INFO] phase=running error=None
+[franz][11:05:54.012][INFO] parse_vlm_json obs_len=472 bboxes=2 actions=2
+[franz][11:05:54.012][INFO] phase=executing error=None
+[franz][11:05:54.013][INFO] execute action=right_click x1=30 y1=69 x2=40 y2=80
+[franz][11:05:54.137][INFO] execute action=click x1=75 y1=71 x2=83 y2=86
+[franz][11:05:54.252][INFO] phase=capturing error=None
+[franz][11:05:54.433][INFO] capture done 512x288 b64len=70680
+[franz][11:05:54.446][INFO] phase=waiting_annotated error=None
+[franz][11:05:54.447][INFO] engine: waiting for browser annotated seq=4
+[franz][11:05:54.706][INFO] phase=calling_vlm error=None
+[franz][11:05:54.707][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=472 img_len=160268
+[franz][11:06:17.803][INFO] vlm ok turn=4 response_len=941 usage={'prompt_tokens': 460, 'completion_tokens': 313, 'total_tokens': 773}
+[franz][11:06:17.804][INFO] phase=running error=None
+[franz][11:06:17.805][INFO] engine: === TURN 5 ===
+[franz][11:06:17.805][INFO] phase=running error=None
+[franz][11:06:17.806][INFO] parse_vlm_json obs_len=562 bboxes=2 actions=2
+[franz][11:06:17.806][INFO] phase=executing error=None
+[franz][11:06:17.806][INFO] execute action=right_click x1=68 y1=523 x2=75 y2=539
+[franz][11:06:17.928][INFO] execute action=double_click x1=40 y1=144 x2=68 y2=159
+[franz][11:06:18.162][INFO] phase=capturing error=None
+[franz][11:06:18.346][INFO] capture done 512x288 b64len=76216
+[franz][11:06:18.353][INFO] phase=waiting_annotated error=None
+[franz][11:06:18.353][INFO] engine: waiting for browser annotated seq=5
+[franz][11:06:18.726][INFO] phase=calling_vlm error=None
+[franz][11:06:18.727][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=562 img_len=155580
+[franz][11:06:43.156][INFO] vlm ok turn=5 response_len=1015 usage={'prompt_tokens': 486, 'completion_tokens': 328, 'total_tokens': 814}
+[franz][11:06:43.157][INFO] phase=running error=None
+[franz][11:06:43.158][INFO] engine: === TURN 6 ===
+[franz][11:06:43.158][INFO] phase=running error=None
+[franz][11:06:43.158][INFO] parse_vlm_json obs_len=636 bboxes=2 actions=2
+[franz][11:06:43.159][INFO] phase=executing error=None
+[franz][11:06:43.159][INFO] execute action=right_click x1=79 y1=91 x2=80 y2=92
+[franz][11:06:43.279][INFO] execute action=double_click x1=435 y1=657 x2=442 y2=662
+[franz][11:06:43.515][INFO] phase=capturing error=None
+[franz][11:06:43.608][INFO] capture done 512x288 b64len=118088
+[franz][11:06:43.614][INFO] phase=waiting_annotated error=None
+[franz][11:06:43.614][INFO] engine: waiting for browser annotated seq=6
+[franz][11:06:43.905][INFO] phase=calling_vlm error=None
+[franz][11:06:43.906][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=636 img_len=201316
+[franz][11:07:00.968][INFO] vlm ok turn=6 response_len=811 usage={'prompt_tokens': 501, 'completion_tokens': 224, 'total_tokens': 725}
+[franz][11:07:00.969][INFO] phase=running error=None
+[franz][11:07:00.969][INFO] engine: === TURN 7 ===
+[franz][11:07:00.969][INFO] phase=running error=None
+[franz][11:07:00.970][INFO] parse_vlm_json obs_len=582 bboxes=0 actions=1
+[franz][11:07:00.970][INFO] phase=executing error=None
+[franz][11:07:00.970][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:07:01.091][INFO] phase=capturing error=None
+[franz][11:07:01.178][INFO] capture done 512x288 b64len=118164
+[franz][11:07:01.183][INFO] phase=waiting_annotated error=None
+[franz][11:07:01.184][INFO] engine: waiting for browser annotated seq=7
+[franz][11:07:01.502][INFO] phase=calling_vlm error=None
+[franz][11:07:01.503][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=582 img_len=200436
+[franz][11:07:18.504][INFO] vlm ok turn=7 response_len=770 usage={'prompt_tokens': 479, 'completion_tokens': 221, 'total_tokens': 700}
+[franz][11:07:18.504][INFO] phase=running error=None
+[franz][11:07:18.504][INFO] engine: === TURN 8 ===
+[franz][11:07:18.504][INFO] phase=running error=None
+[franz][11:07:18.505][INFO] parse_vlm_json obs_len=541 bboxes=0 actions=1
+[franz][11:07:18.505][INFO] phase=executing error=None
+[franz][11:07:18.505][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:07:18.626][INFO] phase=capturing error=None
+[franz][11:07:18.717][INFO] capture done 512x288 b64len=118052
+[franz][11:07:18.723][INFO] phase=waiting_annotated error=None
+[franz][11:07:18.723][INFO] engine: waiting for browser annotated seq=8
+[franz][11:07:19.117][INFO] phase=calling_vlm error=None
+[franz][11:07:19.118][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=541 img_len=200680
+[franz][11:07:35.405][INFO] vlm ok turn=8 response_len=778 usage={'prompt_tokens': 476, 'completion_tokens': 216, 'total_tokens': 692}
+[franz][11:07:35.405][INFO] phase=running error=None
+[franz][11:07:35.406][INFO] engine: === TURN 9 ===
+[franz][11:07:35.406][INFO] phase=running error=None
+[franz][11:07:35.406][INFO] parse_vlm_json obs_len=550 bboxes=0 actions=1
+[franz][11:07:35.406][INFO] phase=executing error=None
+[franz][11:07:35.407][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:07:35.528][INFO] phase=capturing error=None
+[franz][11:07:35.620][INFO] capture done 512x288 b64len=117848
+[franz][11:07:35.627][INFO] phase=waiting_annotated error=None
+[franz][11:07:35.627][INFO] engine: waiting for browser annotated seq=9
+[franz][11:07:35.902][INFO] phase=calling_vlm error=None
+[franz][11:07:35.903][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=550 img_len=200016
+[franz][11:07:53.183][INFO] vlm ok turn=9 response_len=813 usage={'prompt_tokens': 472, 'completion_tokens': 231, 'total_tokens': 703}
+[franz][11:07:53.184][INFO] phase=running error=None
+[franz][11:07:53.184][INFO] engine: === TURN 10 ===
+[franz][11:07:53.185][INFO] phase=running error=None
+[franz][11:07:53.185][INFO] parse_vlm_json obs_len=585 bboxes=0 actions=1
+[franz][11:07:53.185][INFO] phase=executing error=None
+[franz][11:07:53.186][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:07:53.307][INFO] phase=capturing error=None
+[franz][11:07:53.399][INFO] capture done 512x288 b64len=117972
+[franz][11:07:53.404][INFO] phase=waiting_annotated error=None
+[franz][11:07:53.405][INFO] engine: waiting for browser annotated seq=10
+[franz][11:07:53.509][INFO] phase=calling_vlm error=None
+[franz][11:07:53.510][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=585 img_len=200220
+[franz][11:08:09.745][INFO] vlm ok turn=10 response_len=688 usage={'prompt_tokens': 487, 'completion_tokens': 211, 'total_tokens': 698}
+[franz][11:08:09.746][INFO] phase=running error=None
+[franz][11:08:09.746][INFO] engine: === TURN 11 ===
+[franz][11:08:09.746][INFO] phase=running error=None
+[franz][11:08:09.747][INFO] parse_vlm_json obs_len=459 bboxes=0 actions=1
+[franz][11:08:09.747][INFO] phase=executing error=None
+[franz][11:08:09.748][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:08:09.868][INFO] phase=capturing error=None
+[franz][11:08:10.005][INFO] capture done 512x288 b64len=117852
+[franz][11:08:10.013][INFO] phase=waiting_annotated error=None
+[franz][11:08:10.013][INFO] engine: waiting for browser annotated seq=11
+[franz][11:08:10.303][INFO] phase=calling_vlm error=None
+[franz][11:08:10.304][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=459 img_len=200404
+[franz][11:08:27.359][INFO] vlm ok turn=11 response_len=691 usage={'prompt_tokens': 466, 'completion_tokens': 208, 'total_tokens': 674}
+[franz][11:08:27.360][INFO] phase=running error=None
+[franz][11:08:27.360][INFO] engine: === TURN 12 ===
+[franz][11:08:27.361][INFO] phase=running error=None
+[franz][11:08:27.361][INFO] parse_vlm_json obs_len=462 bboxes=0 actions=1
+[franz][11:08:27.361][INFO] phase=executing error=None
+[franz][11:08:27.362][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:08:27.482][INFO] phase=capturing error=None
+[franz][11:08:27.604][INFO] capture done 512x288 b64len=116792
+[franz][11:08:27.611][INFO] phase=waiting_annotated error=None
+[franz][11:08:27.611][INFO] engine: waiting for browser annotated seq=12
+[franz][11:08:27.895][INFO] phase=calling_vlm error=None
+[franz][11:08:27.896][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=462 img_len=198472
+[franz][11:08:41.464][INFO] vlm ok turn=12 response_len=599 usage={'prompt_tokens': 463, 'completion_tokens': 159, 'total_tokens': 622}
+[franz][11:08:41.464][INFO] phase=running error=None
+[franz][11:08:41.465][INFO] engine: === TURN 13 ===
+[franz][11:08:41.465][INFO] phase=running error=None
+[franz][11:08:41.466][INFO] parse_vlm_json obs_len=459 bboxes=0 actions=1
+[franz][11:08:41.466][INFO] phase=executing error=None
+[franz][11:08:41.466][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:08:41.587][INFO] phase=capturing error=None
+[franz][11:08:41.677][INFO] capture done 512x288 b64len=117768
+[franz][11:08:41.683][INFO] phase=waiting_annotated error=None
+[franz][11:08:41.684][INFO] engine: waiting for browser annotated seq=13
+[franz][11:08:41.911][INFO] phase=calling_vlm error=None
+[franz][11:08:41.912][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=459 img_len=192372
+[franz][11:08:57.983][INFO] vlm ok turn=13 response_len=671 usage={'prompt_tokens': 463, 'completion_tokens': 205, 'total_tokens': 668}
+[franz][11:08:57.983][INFO] phase=running error=None
+[franz][11:08:57.984][INFO] engine: === TURN 14 ===
+[franz][11:08:57.984][INFO] phase=running error=None
+[franz][11:08:57.984][INFO] parse_vlm_json obs_len=442 bboxes=0 actions=1
+[franz][11:08:57.985][INFO] phase=executing error=None
+[franz][11:08:57.985][INFO] execute action=right_click x1=79 y1=91 x2=79 y2=91
+[franz][11:08:58.109][INFO] phase=capturing error=None
+[franz][11:08:58.205][INFO] capture done 512x288 b64len=89180
+[franz][11:08:58.211][INFO] phase=waiting_annotated error=None
+[franz][11:08:58.212][INFO] engine: waiting for browser annotated seq=14
+[franz][11:08:58.308][INFO] phase=calling_vlm error=None
+[franz][11:08:58.309][INFO] vlm POST 127.0.0.1:1235/v1/chat/completions story_len=442 img_len=165580
