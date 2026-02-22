@@ -1,0 +1,395 @@
+--- a/main.py
++++ b/main.py
+@@ -184,6 +184,65 @@
+ def _screen_size() -> tuple[int, int]:
+     w, h = int(_user32.GetSystemMetrics(0)), int(_user32.GetSystemMetrics(1))
+     return (w, h) if w > 0 and h > 0 else (1920, 1080)
++
++
++NORM_MAX: Final[int] = 1000
++
++
++def _clampi(v: int, lo: int, hi: int) -> int:
++    return lo if v < lo else hi if v > hi else v
++
++
++def _nedge(v: int, span: int) -> int:
++    v = _clampi(v, 0, NORM_MAX)
++    return (v * span + NORM_MAX // 2) // NORM_MAX
++
++
++def _npt(v: int, span: int) -> int:
++    v = _clampi(v, 0, NORM_MAX)
++    return 0 if span <= 1 else (v * (span - 1) + NORM_MAX // 2) // NORM_MAX
++
++
++def _crop_px(base_w: int, base_h: int) -> tuple[int, int, int, int]:
++    c = _cfg("CAPTURE_CROP", {"x1": 0, "y1": 0, "x2": NORM_MAX, "y2": NORM_MAX})
++    if not isinstance(c, dict):
++        return 0, 0, base_w, base_h
++    x1 = int(c.get("x1", 0))
++    y1 = int(c.get("y1", 0))
++    x2 = int(c.get("x2", NORM_MAX))
++    y2 = int(c.get("y2", NORM_MAX))
++    x1, x2 = (_clampi(x1, 0, NORM_MAX), _clampi(x2, 0, NORM_MAX))
++    y1, y2 = (_clampi(y1, 0, NORM_MAX), _clampi(y2, 0, NORM_MAX))
++    if x2 < x1:
++        x1, x2 = x2, x1
++    if y2 < y1:
++        y1, y2 = y2, y1
++    px1 = _nedge(x1, base_w)
++    py1 = _nedge(y1, base_h)
++    px2 = _nedge(x2, base_w)
++    py2 = _nedge(y2, base_h)
++    px1 = max(0, min(px1, base_w))
++    py1 = max(0, min(py1, base_h))
++    px2 = max(px1, min(px2, base_w))
++    py2 = max(py1, min(py2, base_h))
++    return px1, py1, px2, py2
++
++
++def _norm_to_screen_xy(nx: int, ny: int) -> tuple[int, int]:
++    sw, sh = _screen_size()
++    x1, y1, x2, y2 = _crop_px(sw, sh)
++    return x1 + _npt(nx, x2 - x1), y1 + _npt(ny, y2 - y1)
++
++
++def _screen_to_norm_xy(px: int, py: int) -> tuple[int, int]:
++    sw, sh = _screen_size()
++    x1, y1, x2, y2 = _crop_px(sw, sh)
++    w = max(1, x2 - x1)
++    h = max(1, y2 - y1)
++    nx = _clampi(((px - x1) * NORM_MAX + w // 2) // w, 0, NORM_MAX)
++    ny = _clampi(((py - y1) * NORM_MAX + h // 2) // h, 0, NORM_MAX)
++    return nx, ny
+ 
+ 
+ def _create_dib(dc: Any, w: int, h: int) -> tuple[Any, int]:
+     bits = ctypes.c_void_p()
+     hbmp = _gdi32.CreateDIBSection(
+@@ -301,15 +360,25 @@
+ def capture_screenshot() -> tuple[str, int, int]:
+     if (delay := float(_cfg("CAPTURE_DELAY", 0.0))) > 0:
+         time.sleep(delay)
+     if (cap := _capture_bgra_full()) is None:
+         return "", 0, 0
+     bgra, w, h = cap
+     if (crop := _cfg("CAPTURE_CROP")) and isinstance(crop, dict) and all(k in crop for k in ("x1", "y1", "x2", "y2")):
+-        bgra, w, h = _crop_bgra(bgra, w, h, crop)
++        x1, y1, x2, y2 = _crop_px(w, h)
++        bgra, w, h = _crop_bgra(bgra, w, h, {"x1": x1, "y1": y1, "x2": x2, "y2": y2})
+     out_w, out_h = int(_cfg("CAPTURE_WIDTH", 0)), int(_cfg("CAPTURE_HEIGHT", 0))
+-    if out_w > 0 and out_h > 0 and (w, h) != (out_w, out_h):
+-        if s := _stretch_bgra(bgra, w, h, out_w, out_h):
+-            bgra, w, h = s, out_w, out_h
++    dw = dh = 0
++    if out_w > 0 and out_h > 0:
++        dw, dh = out_w, out_h
++    else:
++        p = int(_cfg("CAPTURE_SCALE_PERCENT", 100) or 100)
++        if p > 0 and p != 100:
++            dw = max(1, (w * p + 50) // 100)
++            dh = max(1, (h * p + 50) // 100)
++    if dw > 0 and dh > 0 and (w, h) != (dw, dh):
++        if s := _stretch_bgra(bgra, w, h, dw, dh):
++            bgra, w, h = s, dw, dh
+     b64 = base64.b64encode(_bgra_to_png(bgra, w, h)).decode("ascii")
+     log.info("capture done %dx%d b64len=%d", w, h, len(b64))
+     return b64, w, h
+ 
+ 
+ def parse_vlm_json(raw: str) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
+@@ -324,18 +393,25 @@
+                 return raw, [], []
+         else:
+             return raw, [], []
+     observation = str(obj.get("observation", ""))
++
++    def ni(v: Any) -> int:
++        try:
++            return _clampi(int(v), 0, NORM_MAX)
++        except Exception:
++            return 0
++
+     bboxes: list[dict[str, Any]] = []
+     for b in obj.get("bboxes", []):
+         if isinstance(b, dict) and all(k in b for k in ("x1", "y1", "x2", "y2")):
+-            bboxes.append({"x1": int(b["x1"]), "y1": int(b["y1"]), "x2": int(b["x2"]), "y2": int(b["y2"])})
++            bboxes.append({"x1": ni(b["x1"]), "y1": ni(b["y1"]), "x2": ni(b["x2"]), "y2": ni(b["y2"])})
+     actions: list[dict[str, Any]] = []
+     for a in obj.get("actions", []):
+         if isinstance(a, dict) and "name" in a and "x1" in a and "y1" in a:
+-            entry: dict[str, Any] = {"name": str(a["name"]).lower(), "x1": int(a["x1"]), "y1": int(a["y1"])}
++            entry: dict[str, Any] = {"name": str(a["name"]).lower(), "x1": ni(a["x1"]), "y1": ni(a["y1"])}
+             if "x2" in a and "y2" in a:
+-                entry["x2"] = int(a["x2"])
+-                entry["y2"] = int(a["y2"])
++                entry["x2"] = ni(a["x2"])
++                entry["y2"] = ni(a["y2"])
+             actions.append(entry)
+     log.info("parse_vlm_json obs_len=%d bboxes=%d actions=%d", len(observation), len(bboxes), len(actions))
+     return observation, bboxes, actions
+ 
+ 
+ def format_user_payload(observation: str, annotated_b64: str) -> dict[str, Any]:
+@@ -385,9 +461,11 @@
+     action_delay = float(_cfg("ACTION_DELAY_SECONDS", 0.05))
+     drag_steps = int(_cfg("DRAG_DURATION_STEPS", 20))
+     drag_step_d = float(_cfg("DRAG_STEP_DELAY", 0.01))
+     for a in actions:
+         name = a.get("name", "")
+-        x1, y1 = int(a.get("x1", 0)), int(a.get("y1", 0))
+-        x2, y2 = int(a.get("x2", x1)), int(a.get("y2", y1))
+-        log.info("execute action=%s x1=%d y1=%d x2=%d y2=%d", name, x1, y1, x2, y2)
++        nx1, ny1 = int(a.get("x1", 0)), int(a.get("y1", 0))
++        nx2, ny2 = int(a.get("x2", nx1)), int(a.get("y2", ny1))
++        x1, y1 = _norm_to_screen_xy(nx1, ny1)
++        x2, y2 = _norm_to_screen_xy(nx2, ny2)
++        log.info("execute action=%s nx1=%d ny1=%d nx2=%d ny2=%d px1=%d py1=%d px2=%d py2=%d", name, nx1, ny1, nx2, ny2, x1, y1, x2, y2)
+         match name:
+             case "move":
+                 _move_to(x1, y1)
+             case "click":
+                 _move_to(x1, y1)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_LEFTDOWN)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_LEFTUP)
+             case "right_click":
+                 _move_to(x1, y1)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_RIGHTDOWN)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_RIGHTUP)
+             case "double_click":
+                 _move_to(x1, y1)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_LEFTDOWN)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_LEFTUP)
+                 time.sleep(0.06)
+                 _mouse(MOUSEEVENTF_LEFTDOWN)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_LEFTUP)
+             case "drag":
+                 _move_to(x1, y1)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_LEFTDOWN)
+                 time.sleep(0.03)
+                 for i in range(1, max(1, drag_steps) + 1):
+                     tx = x1 + (x2 - x1) * i // drag_steps
+                     ty = y1 + (y2 - y1) * i // drag_steps
+                     _move_to(tx, ty)
+                     time.sleep(drag_step_d)
+                 time.sleep(0.03)
+                 _mouse(MOUSEEVENTF_LEFTUP)
+             case _:
+                 log.warning("unknown action name=%r", name)
+         time.sleep(action_delay)
+--- a/panel.html
++++ b/panel.html
+@@ -195,6 +195,10 @@
+ 
+ let canvasW=0,canvasH=0;
+ 
++const NORM_MAX=1000;
++const nx=v=>(Number(v)||0)*canvasW/NORM_MAX;
++const ny=v=>(Number(v)||0)*canvasH/NORM_MAX;
++
+ function resizeCanvases(w,h){
+   if(canvasW===w&&canvasH===h)return;
+   canvasW=w;canvasH=h;
+@@ -211,30 +215,74 @@
+ 
+ function clearLayer(ctx){ctx.clearRect(0,0,canvasW,canvasH)}
+ 
+-function drawExecutedHeat(actions){
+-  const cfg=(CFG.ui?.executed_heat)||{};
+-  if(cfg.enabled===false)return;
+-  const radiusScale=cfg.radius_scale??0.22;
+-  const stops=cfg.stops??[[0,'rgba(255,40,0,0.88)'],[0.25,'rgba(255,80,0,0.70)'],[0.55,'rgba(255,120,0,0.35)'],[1,'rgba(255,160,0,0)']];
+-  const r=Math.max(canvasW,canvasH)*radiusScale;
+-  for(const a of actions){
+-    const x=a.x1,y=a.y1;
+-    const grad=ctxHeat.createRadialGradient(x,y,0,x,y,r);
+-    for(const[pos,col]of stops)grad.addColorStop(pos,col);
+-    ctxHeat.beginPath();ctxHeat.arc(x,y,r,0,Math.PI*2);ctxHeat.fillStyle=grad;ctxHeat.fill();
+-    if(a.x2!==undefined&&a.y2!==undefined){
+-      const x2=a.x2,y2=a.y2;
+-      const g2=ctxHeat.createRadialGradient(x2,y2,0,x2,y2,r*0.6);
+-      for(const[pos,col]of stops)g2.addColorStop(pos,col);
+-      ctxHeat.beginPath();ctxHeat.arc(x2,y2,r*0.6,0,Math.PI*2);ctxHeat.fillStyle=g2;ctxHeat.fill();
+-      ctxHeat.beginPath();ctxHeat.moveTo(x,y);ctxHeat.lineTo(x2,y2);
+-      ctxHeat.strokeStyle='rgba(255,100,20,0.35)';ctxHeat.lineWidth=2;ctxHeat.stroke();
+-    }
+-  }
+-}
++let heatTrail=[];
++
++function drawExecutedHeat(actions,alphaMul=1,shrinkMul=1){
++  const cfg=(CFG.ui?.executed_heat)||{};
++  if(cfg.enabled===false)return;
++  ctxHeat.save();
++  ctxHeat.globalAlpha*=Math.max(0,Math.min(1,Number(alphaMul)||0));
++  const radiusScale=cfg.radius_scale??0.22;
++  const stops=cfg.stops??[[0,'rgba(255,40,0,0.88)'],[0.25,'rgba(255,80,0,0.70)'],[0.55,'rgba(255,120,0,0.35)'],[1,'rgba(255,160,0,0)']];
++  const sm=Number(shrinkMul);const s=isFinite(sm)&&sm>0?sm:1;
++  const r=Math.max(canvasW,canvasH)*radiusScale*s;
++  for(const a of actions){
++    let x=nx(a.x1),y=ny(a.y1);
++    const grad=ctxHeat.createRadialGradient(x,y,0,x,y,r);
++    for(const[pos,col]of stops)grad.addColorStop(pos,col);
++    ctxHeat.beginPath();ctxHeat.arc(x,y,r,0,Math.PI*2);ctxHeat.fillStyle=grad;ctxHeat.fill();
++    if(a.x2!==undefined&&a.y2!==undefined){
++      let x2=nx(a.x2),y2=ny(a.y2);
++      if(s!==1){
++        const mx=(x+x2)/2,my=(y+y2)/2;
++        x=mx+(x-mx)*s;y=my+(y-my)*s;
++        x2=mx+(x2-mx)*s;y2=my+(y2-my)*s;
++      }
++      const g2=ctxHeat.createRadialGradient(x2,y2,0,x2,y2,r*0.6);
++      for(const[pos,col]of stops)g2.addColorStop(pos,col);
++      ctxHeat.beginPath();ctxHeat.arc(x2,y2,r*0.6,0,Math.PI*2);ctxHeat.fillStyle=g2;ctxHeat.fill();
++      ctxHeat.beginPath();ctxHeat.moveTo(x,y);ctxHeat.lineTo(x2,y2);
++      ctxHeat.strokeStyle='rgba(255,100,20,0.35)';ctxHeat.lineWidth=Math.max(1,2*s);ctxHeat.stroke();
++    }
++  }
++  ctxHeat.restore();
++}
++
++function drawExecutedHeatTrail(seq,actions){
++  const cfg=(CFG.ui?.executed_heat)||{};
++  const n=Math.max(1,Number(cfg.trail_turns??1)||1);
++  if(n<=1){heatTrail.length=0;drawExecutedHeat(actions);return}
++  if(heatTrail.length&&seq<=heatTrail[heatTrail.length-1].seq)heatTrail.length=0;
++  if(heatTrail.length&&heatTrail[heatTrail.length-1].seq===seq)heatTrail[heatTrail.length-1].actions=actions;
++  else heatTrail.push({seq,actions});
++  while(heatTrail.length>n)heatTrail.shift();
++  const sb=Number(cfg.trail_shrink??1);const s=isFinite(sb)&&sb>0?sb:1;
++  const L=heatTrail.length;
++  for(let i=0;i<L;i++){
++    const age=L-1-i;
++    const a=(i+1)/L;
++    const sh=s===1?1:Math.pow(s,age);
++    drawExecutedHeat(heatTrail[i].actions,a,sh);
++  }
++}
+ 
+ function drawBboxHeat(bboxes){
+   const cfg=(CFG.ui?.bbox_heat)||{};
+   if(cfg.enabled===false)return;
+   const border=cfg.border??'rgba(80,160,255,0.75)';
+   const borderWidth=cfg.border_width??2;
+   const fillStops=cfg.fill_stops??[[0,'rgba(80,160,255,0.28)'],[0.5,'rgba(80,160,255,0.12)'],[1,'rgba(80,160,255,0)']];
+   for(const bb of bboxes){
+-    const{x1,y1,x2,y2}=bb;
++    const x1=nx(bb.x1),y1=ny(bb.y1),x2=nx(bb.x2),y2=ny(bb.y2);
+     const bw=x2-x1,bh=y2-y1;
+     if(bw<=0||bh<=0)continue;
+     const cx=x1+bw/2,cy=y1+bh/2,rr=Math.max(bw,bh)/2;
+     const grad=ctxHeat.createRadialGradient(cx,cy,0,cx,cy,rr);
+     for(const[pos,col]of fillStops)grad.addColorStop(pos,col);
+     ctxHeat.fillStyle=grad;ctxHeat.fillRect(x1,y1,bw,bh);
+     ctxHeat.strokeStyle=border;ctxHeat.lineWidth=borderWidth;ctxHeat.strokeRect(x1,y1,bw,bh);
+   }
+ }
+@@ -255,7 +303,7 @@
+ function drawLabels(actions){
+   clearLayer(ctxLabel);
+   ctxLabel.font='bold 10px "Cascadia Code","Fira Code",Consolas,monospace';
+   ctxLabel.textBaseline='bottom';
+   actions.forEach((a,i)=>{
+     const label=`${i+1}. ${a.name}(${a.x1},${a.y1})`;
+-    const x=a.x1+6,y=a.y1-3;
++    const x=nx(a.x1)+6,y=ny(a.y1)-3;
+     ctxLabel.fillStyle='rgba(0,0,0,0.7)';
+     const m=ctxLabel.measureText(label);
+     ctxLabel.fillRect(x-2,y-11,m.width+4,13);
+     ctxLabel.fillStyle='#fff';ctxLabel.fillText(label,x,y);
+   });
+ }
+@@ -369,7 +417,7 @@
+     document.getElementById('badge-img').className='badge warn';
+     await loadBaseImage(b64);
+     clearLayer(ctxHeat);
+     drawBboxHeat(state.bboxes||[]);
+-    drawExecutedHeat(state.actions||[]);
++    drawExecutedHeatTrail(seq,state.actions||[]);
+     drawLabels(state.actions||[]);
+     if(state.vlm_json)renderVlmJson(state.vlm_json,state.bboxes,state.actions);
+     const annotatedB64=await exportAnnotated();
+     uiLog(`exported annotated len=${annotatedB64.length}`,'ok');
+     const ok=await postAnnotated(seq,annotatedB64);
+     document.getElementById('badge-img').textContent=ok?`seq ${seq} ok`:`seq ${seq} fail`;
+     document.getElementById('badge-img').className=ok?'badge ok':'badge bad';
+   }catch(e){
+     uiLog(`handle frame err ${e}`,'bad');
+   }finally{
+     processing=false;
+   }
+ }
+--- a/config.py
++++ b/config.py
+@@ -28,15 +28,17 @@
+     "  ]\n"
+     "}\n\n"
+     "Rules:\n"
++    "- All coordinates are normalized ints in [0..1000] relative to the current screenshot crop. (0,0)=top-left, (1000,1000)=bottom-right, (500,500)=center.\n"
+     "- x2/y2 are only required for drag.\n"
+     "- At most 8 bboxes, at most 6 actions.\n"
+     "- Never fabricate feedback. Only describe what you see.\n"
+     "- Output ONLY the JSON object, nothing else.\n"
+ )
+ 
+-CAPTURE_CROP = {"x1": 0, "y1": 0, "x2": 1920, "y2": 1080}
++CAPTURE_CROP = {"x1": 0, "y1": 0, "x2": 1000, "y2": 1000}
+ CAPTURE_WIDTH = 512
+ CAPTURE_HEIGHT = 288
++CAPTURE_SCALE_PERCENT = 100
+ CAPTURE_DELAY = 0.0
+ 
+ RUNS_DIR = "runs"
+@@ -44,12 +46,12 @@
+ BOOT_ENABLED = True
+ BOOT_VLM_OUTPUT = """\
+ {
+-  "observation": "I observe the desktop. There is a canvas area in the center of the screen. I will begin by clicking in the center to focus it, then drawing a shape.",
++  "observation": "I observe the desktop. There is a canvas area in the center of the screen. I will begin by clicking the center (500,500) to focus it, then drawing a shape.",
+   "bboxes": [
+     {"x1": 200, "y1": 150, "x2": 800, "y2": 600}
+   ],
+   "actions": [
+-    {"name": "click", "x1": 500, "y1": 400},
++    {"name": "click", "x1": 500, "y1": 500},
+     {"name": "drag", "x1": 300, "y1": 300, "x2": 700, "y2": 300},
+     {"name": "drag", "x1": 700, "y1": 300, "x2": 700, "y2": 600},
+     {"name": "drag", "x1": 700, "y1": 600, "x2": 300, "y2": 600},
+     {"name": "drag", "x1": 300, "y1": 600, "x2": 300, "y2": 300}
+   ]
+ }
+ """
+@@ -64,6 +66,8 @@
+ UI_CONFIG = {
+     "executed_heat": {
+         "enabled": True,
+         "radius_scale": 0.22,
++        "trail_turns": 1,
++        "trail_shrink": 1.0,
+         "stops": [
+             [0.00, "rgba(255,40,0,0.88)"],
+             [0.25, "rgba(255,80,0,0.70)"],
+             [0.55, "rgba(255,120,0,0.35)"],
+             [1.00, "rgba(255,160,0,0.00)"],
+         ],
+     },
+     "bbox_heat": {
+         "enabled": True,
+         "border": "rgba(80,160,255,0.75)",
+         "border_width": 2,
+         "fill_stops": [
+             [0.00, "rgba(80,160,255,0.28)"],
+             [0.50, "rgba(80,160,255,0.12)"],
+             [1.00, "rgba(80,160,255,0.00)"],
+         ],
+     },
+ }
